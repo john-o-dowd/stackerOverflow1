@@ -20,3 +20,6 @@ Data loading:
 2) From pickle:
     If the pickle file is present in the root folder then the data in the pickle
      file will be used as data source.
+
+Medium post discussing trends observed in data:
+https://medium.com/@jodowd_87110/trends-in-stack-overflow-user-base-from-2018-to-2021-7d08a8f17315
