@@ -1,7 +1,8 @@
 - Analyse multiple years worth of stack overflow user survey data
 - Look at change in demographics of the years analysed
 (data from stack over can be found here: https://insights.stackoverflow.com/survey
-- Code is executed using either:
+
+Code is executed using either:
 1) ipython notebook
     StackOverflowAnalyse.ipynb
 2) running
