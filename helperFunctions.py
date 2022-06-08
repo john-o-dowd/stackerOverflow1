@@ -80,9 +80,9 @@ class DataProcess:
         self.allDfs = all_dfs
         self.columnsLoaded = columns_loaded
 
-    def find_multi_year_age_profile(self):
+    def age_profile_aliases(self):
         # the age groupings are a bit too granular so further group them
-        yearAliases = {'Under 18 years old': ['Under 18 years old'],
+        self.yearAliases = {'Under 18 years old': ['Under 18 years old'],
                        '18 - 24 years old': ['18 - 24 years old', '18-24 years old'],
                        '25 - 34 years old': ['25 - 34 years old', '25-34 years old'],
                        '35 - 44 years old': ['35 - 44 years old', '35-44 years old'],
@@ -90,16 +90,19 @@ class DataProcess:
                        '55 - 64 years old': ['55 - 64 years old', '55-64 years old'],
                        '65 years or older': ['65 years or older']
                        }
-        yearsToGroup = {'under24': ['Under 18 years old', '18 - 24 years old'],
+        self.yearsToGroup = {'under24': ['Under 18 years old', '18 - 24 years old'],
                         '24-55': ['25 - 34 years old', '35 - 44 years old', '45 - 54 years old'],
                         'over55': ['55 - 64 years old', '65 years or older']}
-        yearsToGroupNumeric = {'under24': [6, 24],
+        self.yearsToGroupNumeric = {'under24': [6, 24],
                                '24-55': [25, 54],
                                'over55': [55, 90]}
+
+    def find_multi_year_age_profile(self):
+
         # dfSingleYearDF[(dfSingleYearDF['Age'] < 16) & (dfSingleYearDF['Age'] > 10)][0].sum()
 
         dfAgeProfile = pd.DataFrame()
-        dfAgeProfile['ageRange'] = yearsToGroup.keys()
+        dfAgeProfile['ageRange'] = self.yearsToGroup.keys()
         for itt, year in enumerate(self.years):
             dfSingleYear = self.allDfs[itt].value_counts(subset=['Age'], dropna=True)
             # temp['25 - 34 years old']
@@ -107,9 +110,9 @@ class DataProcess:
             keys = list(yearsToGroup.keys())  # year groupings (i.e. under 24)
             subgroupCounters = []
             if len(dfSingleYear.keys()) > 20:  # some years dont have groupings in the source data
-                for key in yearsToGroupNumeric.keys():
-                    start = yearsToGroupNumeric[key][0]
-                    end = yearsToGroupNumeric[key][1]
+                for key in self.yearsToGroupNumeric.keys():
+                    start = self.yearsToGroupNumeric[key][0]
+                    end = self.yearsToGroupNumeric[key][1]
                     dfSingleYearDF = pd.DataFrame(dfSingleYear)
                     dfSingleYearDF = dfSingleYearDF.reset_index()
                     subgroupCounters.append(
