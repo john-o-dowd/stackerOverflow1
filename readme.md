@@ -6,7 +6,7 @@ Code is executed using either:
 1) ipython notebook
     StackOverflowAnalyse.ipynb
 2) running
-    run_analyse.py
+    analyse.py
 
 Data loading:
 1) From csv:

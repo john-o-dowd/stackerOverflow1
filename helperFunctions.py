@@ -16,10 +16,17 @@ class DataLoader:
         # check what data is available (in csv format)
         # folders=os.listdir(folder)
         self.folder = folder
-
-
         self.pickleLocation = "loaded_data.p"
         self.picklePresent = exists("loaded_data.p")
+
+    def stackoverflow_column_aliases(self):
+        self.col_aliases = {'EdLevel': ['EdLevel', 'FormalEducation'],
+                            'Age': ['Age'],
+                            'Gender': ['Gender'],
+                            'StackOverflowVisit': ['StackOverflowVisit', 'SOVisitFreq'],
+                            'Professional': ['Professional'],
+                            # 'Age1stCode': ['Age1stCode'],#not present in 2019 so dont use
+                            'Country': ['Country']}
 
     def loadyears(self, years, columns):
 
@@ -36,7 +43,7 @@ class DataLoader:
             self.yearFolders = [s for s in folders if "zip" not in s]
             self.yearsAvailable = [(int(s[-4:])) for s in folders if "zip" not in s]
             if all(elem in self.yearsAvailable for elem in years):  # check the years are available to load
-                print("all years are available")
+                print("all requested years are available:")
                 locs = []  # file indices to load
                 for year in years:
                     locs.append([i for i, s in enumerate(self.yearFolders) if str(year) in s])
@@ -45,13 +52,7 @@ class DataLoader:
                 exit('999:some of the requested years are not available')
 
             # define column aliases as the names of columns changed a bit over the years in the source data
-            col_aliases = {'EdLevel': ['EdLevel', 'FormalEducation'],
-                           'Age': ['Age'],
-                           'Gender': ['Gender'],
-                           'StackOverflowVisit': ['StackOverflowVisit', 'SOVisitFreq'],
-                           'Professional': ['Professional'],
-                           # 'Age1stCode': ['Age1stCode'],#not present in 2019 so dont use
-                           'Country': ['Country']}
+
             all_dfs = []
             for loc in locs:  # files to load (each file is a different year)
                 print(self.yearFolders[loc[0]])
@@ -59,9 +60,10 @@ class DataLoader:
                 colsPresent = (set(df.columns))
                 cols2Load = []
                 for column in columns:
-                    cols2Load.append(set.intersection(set(col_aliases[column]), set(colsPresent)).pop())
+                    cols2Load.append(set.intersection(set(self.col_aliases[column]), set(colsPresent)).pop())
                 newDF = \
-                    pd.read_csv(f'./multipleYears/{self.yearFolders[loc[0]]}/survey_results_public.csv', usecols=cols2Load,
+                    pd.read_csv(f'./multipleYears/{self.yearFolders[loc[0]]}/survey_results_public.csv',
+                                usecols=cols2Load,
                                 low_memory=False)[cols2Load]
                 newDF.columns = columns  # make the column labesl consistent (use common column alias)
                 all_dfs.append(newDF)
@@ -69,33 +71,38 @@ class DataLoader:
                 with open(self.pickleLocation, 'wb') as handle:
                     pickle.dump(all_dfs, handle)
 
-
         return all_dfs
-
 
 
 class DataProcess:
     def __init__(self, all_dfs, years, columns_loaded):
+        self.yearsToGroupNumeric = None
+        self.educationPlotAliases = None
+        self.yearAliases = None
+        self.yearsToGroup = None
+        self.educationAliases=None
         self.years = years
         self.allDfs = all_dfs
         self.columnsLoaded = columns_loaded
+        self.educationAliases
 
     def age_profile_aliases(self):
         # the age groupings are a bit too granular so further group them
         self.yearAliases = {'Under 18 years old': ['Under 18 years old'],
-                       '18 - 24 years old': ['18 - 24 years old', '18-24 years old'],
-                       '25 - 34 years old': ['25 - 34 years old', '25-34 years old'],
-                       '35 - 44 years old': ['35 - 44 years old', '35-44 years old'],
-                       '45 - 54 years old': ['45 - 54 years old', '45-54 years old'],
-                       '55 - 64 years old': ['55 - 64 years old', '55-64 years old'],
-                       '65 years or older': ['65 years or older']
-                       }
+                            '18 - 24 years old': ['18 - 24 years old', '18-24 years old'],
+                            '25 - 34 years old': ['25 - 34 years old', '25-34 years old'],
+                            '35 - 44 years old': ['35 - 44 years old', '35-44 years old'],
+                            '45 - 54 years old': ['45 - 54 years old', '45-54 years old'],
+                            '55 - 64 years old': ['55 - 64 years old', '55-64 years old'],
+                            '65 years or older': ['65 years or older']
+                            }
         self.yearsToGroup = {'under24': ['Under 18 years old', '18 - 24 years old'],
-                        '24-55': ['25 - 34 years old', '35 - 44 years old', '45 - 54 years old'],
-                        'over55': ['55 - 64 years old', '65 years or older']}
+                             '24-55': ['25 - 34 years old', '35 - 44 years old', '45 - 54 years old'],
+                             'over55': ['55 - 64 years old', '65 years or older']}
         self.yearsToGroupNumeric = {'under24': [6, 24],
-                               '24-55': [25, 54],
-                               'over55': [55, 90]}
+                                    '24-55': [25, 54],
+                                    'over55': [55, 90]}
+        return ()
 
     def find_multi_year_age_profile(self):
 
@@ -107,7 +114,7 @@ class DataProcess:
             dfSingleYear = self.allDfs[itt].value_counts(subset=['Age'], dropna=True)
             # temp['25 - 34 years old']
 
-            keys = list(yearsToGroup.keys())  # year groupings (i.e. under 24)
+            keys = list(self.yearsToGroup.keys())  # year groupings (i.e. under 24)
             subgroupCounters = []
             if len(dfSingleYear.keys()) > 20:  # some years dont have groupings in the source data
                 for key in self.yearsToGroupNumeric.keys():
@@ -119,11 +126,11 @@ class DataProcess:
                         dfSingleYearDF[(dfSingleYearDF['Age'] > start) & (dfSingleYearDF['Age'] < end)][0].sum())
             else:  # if the years are grouped then the datatype for age is a string
                 for key in keys:  # iterate over each age group
-                    groups2Load = yearsToGroup[key]
+                    groups2Load = self.yearsToGroup[key]
                     subgroupCounter = 0
                     for group in groups2Load:  # iterate over the age subgroups that are to be aggregated
                         # check aliases of group to see which one is in use
-                        subGroupAliases = yearAliases[group]
+                        subGroupAliases = self.yearAliases[group]
                         ageGroupsInCurYear = list(pd.DataFrame(dfSingleYear).reset_index()['Age'])
                         subgroupCounter = subgroupCounter + dfSingleYear[
                             set.intersection(set(subGroupAliases), set(ageGroupsInCurYear)).pop()]
@@ -131,10 +138,8 @@ class DataProcess:
             dfAgeProfile[year] = subgroupCounters
         return dfAgeProfile
 
-    def find_multi_year_education_profile(self):
-        # check the number of professionals in the US
-
-        educationAliases = {'Some college/university study without earning a degree': [
+    def education_profile_aliases(self):
+        self.educationAliases = {'Some college/university study without earning a degree': [
             'Some college/university study without earning a degree'],
             'Professional degree (JD, MD, etc.)': ['Professional degree (JD, MD, etc.)'],
             'Bachelor’s degree (BA, BS, B.Eng., etc.)': ['Bachelor’s degree (BA, BS, B.Eng., etc.)',
@@ -148,28 +153,32 @@ class DataProcess:
             'Primary/elementary school': ['Primary/elementary school'],
             'Other doctoral degree (Ph.D, Ed.D., etc.)': ['Other doctoral degree (Ph.D, Ed.D., etc.)',
                                                           'Other doctoral degree (Ph.D., Ed.D., etc.)']}
-        educationPlotAliases = {'Some college/university study without earning a degree': 'College without degree',
-                                'Professional degree (JD, MD, etc.)': 'Professional degree',
-                                'Bachelor’s degree (BA, BS, B.Eng., etc.)': 'Bachelor’s degree',
-                                # 'I never completed any formal education':'Something Else',
-                                'Associate degree': 'Associate degree',
-                                'Master’s degree (MA, MS, M.Eng., MBA, etc.)': 'Master’s degree',
-                                'Secondary school (e.g. American high school, German Realschule or Gymnasium, etc.)':
-                                    'Secondary school',
-                                'Primary/elementary school': 'Primary school',
-                                'Other doctoral degree (Ph.D, Ed.D., etc.)': 'Other Doctoral degree'
-                                }
+        self.educationPlotAliases = {'Some college/university study without earning a degree': 'College without degree',
+                                     'Professional degree (JD, MD, etc.)': 'Professional degree',
+                                     'Bachelor’s degree (BA, BS, B.Eng., etc.)': 'Bachelor’s degree',
+                                     # 'I never completed any formal education':'Something Else',
+                                     'Associate degree': 'Associate degree',
+                                     'Master’s degree (MA, MS, M.Eng., MBA, etc.)': 'Master’s degree',
+                                     'Secondary school (e.g. American high school, German Realschule or Gymnasium, '
+                                     'etc.)':
+                                         'Secondary school',
+                                     'Primary/elementary school': 'Primary school',
+                                     'Other doctoral degree (Ph.D, Ed.D., etc.)': 'Other Doctoral degree'}
+        return
+
+    def find_multi_year_education_profile(self):
+        # check the number of professionals in the US
 
         years = self.years
 
         dfEduProfileMultiYear = pd.DataFrame()
-        dfEduProfileMultiYear['EdLevel'] = list(educationPlotAliases.values())
+        dfEduProfileMultiYear['EdLevel'] = list(self.educationPlotAliases.values())
 
         for itt, year in enumerate(years):
             dfEduSingleYear = self.allDfs[itt]
             singleYearCounters = []
-            for group in educationAliases.keys():  # itterate through each group of eductation type
-                curEduAlias = set.intersection(set(educationAliases[group]), set(dfEduSingleYear.EdLevel.unique()))
+            for group in self.educationAliases.keys():  # itterate through each group of eductation type
+                curEduAlias = set.intersection(set(self.educationAliases[group]), set(dfEduSingleYear.EdLevel.unique()))
                 singleYearCounters.append(dfEduSingleYear.EdLevel.value_counts()[list(curEduAlias)].values[0])
             dfEduProfileMultiYear[year] = singleYearCounters
 
@@ -227,7 +236,7 @@ class Dataplotter:
         plt.figure(f'Age profile for last {len(self.yearsToLoad)}-years')
         plt.title(f'Age profile for last {len(self.yearsToLoad)}-years')
         for year in self.yearsToLoad:
-            plt.plot(df_age_profile.ageRange, 100*(df_age_profile[year] / df_age_profile[year].sum()))
+            plt.plot(df_age_profile.ageRange, 100 * (df_age_profile[year] / df_age_profile[year].sum()))
         plt.legend(self.yearsToLoad)
         plt.xlabel('Age bands')
         plt.ylabel('Percent (%)')
@@ -248,8 +257,8 @@ class Dataplotter:
         plt.title(f'Education profile for last {len(self.yearsToLoad)}-years')
         plt.xticks(rotation=90)
         for year in self.yearsToLoad:
-            plt.plot(df_edu_profile_multi_year['EdLevel'], 100*(df_edu_profile_multi_year[year] /
-                     df_edu_profile_multi_year[year].sum()))
+            plt.plot(df_edu_profile_multi_year['EdLevel'], 100 * (df_edu_profile_multi_year[year] /
+                                                                  df_edu_profile_multi_year[year].sum()))
         plt.legend(self.yearsToLoad)
         plt.xlabel('Education bands')
         plt.ylabel('Percent (%)')
@@ -363,9 +372,9 @@ class Dataplotter:
                          [(continentAliases[continent])])
         # save into the file
         worldmap.render_to_file('proportionalChangeInLocation.svg')
-        #worldmap.render_to_png('./proportionalChangeInLocation.png')
+        # worldmap.render_to_png('./proportionalChangeInLocation.png')
 
-        #re render svg as png as it is easier to load into jupyter notebook (currently not working due to svg3rlg bug)
+        # re render svg as png as it is easier to load into jupyter notebook (currently not working due to svg3rlg bug)
         # -*- coding: utf-8 -*-
         # drawing = svg2rlg('proportionalChangeInLocation.svg')
         # renderPM.drawToFile(drawing, 'proportionalChangeInLocation.png', fmt='PNG')
