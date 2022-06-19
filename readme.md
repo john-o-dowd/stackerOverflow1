@@ -6,10 +6,10 @@ Motivation:
 
 Installation and Data loading:
 1) From csv:
-   \multipleYears\stack-overflow-developer-survey-2018\survey_results_public.csv
-   \multipleYears\stack-overflow-developer-survey-2019\survey_results_public.csv
-   \multipleYears\stack-overflow-developer-survey-2020\survey_results_public.csv
-   \multipleYears\stack-overflow-developer-survey-2021\survey_results_public.csv
+   - \multipleYears\stack-overflow-developer-survey-2018\survey_results_public.csv
+   - \multipleYears\stack-overflow-developer-survey-2019\survey_results_public.csv
+   - \multipleYears\stack-overflow-developer-survey-2020\survey_results_public.csv
+   - \multipleYears\stack-overflow-developer-survey-2021\survey_results_public.csv
 
     The contents of the survey_results_public is downloaded from stack overflow
     and then copied into the apropriate folder structure
