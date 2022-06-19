@@ -7,7 +7,7 @@ Code is executed using either:
     StackOverflowAnalyse.ipynb
 2) running
     analyse.py
-
+<img src="https://miro.medium.com/max/1209/1*KGixCUcZ-L15Q0Bwd1XiJA.png" width="800px" height="auto">
 Data loading:
 1) From csv:
    \multipleYears\stack-overflow-developer-survey-2018\survey_results_public.csv
