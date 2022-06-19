@@ -11,15 +11,26 @@ from os.path import exists
 
 
 class DataLoader:
-
+    """
+    Class that handles data loading
+    also saves loaded data in pickle for faster reloading of data
+    """
     def __init__(self, folder):
-        # check what data is available (in csv format)
-        # folders=os.listdir(folder)
+        """
+        Initialises data load locations
+        input: location of the csv folder with the multi-year data
+        """
+        self.yearFolders = None
+        self.yearsAvailable = None
         self.folder = folder
         self.pickleLocation = "loaded_data.p"
         self.picklePresent = exists("loaded_data.p")
 
     def stackoverflow_column_aliases(self):
+        """
+        Column naming is inconsistent in dataset for different years
+        retured: aliases for the different columns
+        """
         self.col_aliases = {'EdLevel': ['EdLevel', 'FormalEducation'],
                             'Age': ['Age'],
                             'Gender': ['Gender'],
@@ -29,16 +40,19 @@ class DataLoader:
                             'Country': ['Country']}
 
     def loadyears(self, years, columns):
-
+        """
+        Load data to analyse
+        input: years and columns to load
+        If pickle is found then it is loaded instead of the csv file
+        If the pickle is not found then the csv is loaded and the csv data is also saved to pickle for next time
+        """
         if self.picklePresent:
             with open(self.pickleLocation, 'rb') as handle:
                 all_dfs = pickle.load(handle)
         else:
-
-            ################################
-            # Load the requested data for multiple years
-            ################################
-            # years=years to load
+            '''
+            Load the requested data for multiple years
+            '''
             folders = os.listdir(self.folder)
             self.yearFolders = [s for s in folders if "zip" not in s]
             self.yearsAvailable = [(int(s[-4:])) for s in folders if "zip" not in s]
@@ -75,19 +89,28 @@ class DataLoader:
 
 
 class DataProcess:
+    """
+    Class to carry out processing of the data processed data is
+     returned as dataframes to be plotted by the Dataplotter class
+    """
     def __init__(self, all_dfs, years, columns_loaded):
         self.yearsToGroupNumeric = None
         self.educationPlotAliases = None
         self.yearAliases = None
         self.yearsToGroup = None
-        self.educationAliases=None
+        self.educationAliases = None
         self.years = years
         self.allDfs = all_dfs
         self.columnsLoaded = columns_loaded
         self.educationAliases
 
     def age_profile_aliases(self):
-        # the age groupings are a bit too granular so further group them
+        """
+        Column naming is inconsistent in dataset for different years
+        the age groupings are a bit too granular (to confusing for the reader
+        to understand) so a set of ages to group is defined
+        retured: aliases for the different columns and age grouping
+        """
         self.yearAliases = {'Under 18 years old': ['Under 18 years old'],
                             '18 - 24 years old': ['18 - 24 years old', '18-24 years old'],
                             '25 - 34 years old': ['25 - 34 years old', '25-34 years old'],
@@ -105,9 +128,10 @@ class DataProcess:
         return ()
 
     def find_multi_year_age_profile(self):
-
-        # dfSingleYearDF[(dfSingleYearDF['Age'] < 16) & (dfSingleYearDF['Age'] > 10)][0].sum()
-
+        """
+        Group the users up based on yearsToGroup
+        returns: dataframe with users grouped by age for each of the years of interest
+        """
         dfAgeProfile = pd.DataFrame()
         dfAgeProfile['ageRange'] = self.yearsToGroup.keys()
         for itt, year in enumerate(self.years):
@@ -139,6 +163,13 @@ class DataProcess:
         return dfAgeProfile
 
     def education_profile_aliases(self):
+        """
+        - The titles of education qualifications is incosistent across multiple years so aliases
+        are definied to handle this
+        - Also certain qualifications are similar and as such were possible to group together
+        - The strings defining the education qualification are very long and shortened aliases of these
+        names are defined so that the plots using these strings are more readable
+        """
         self.educationAliases = {'Some college/university study without earning a degree': [
             'Some college/university study without earning a degree'],
             'Professional degree (JD, MD, etc.)': ['Professional degree (JD, MD, etc.)'],
@@ -167,10 +198,11 @@ class DataProcess:
         return
 
     def find_multi_year_education_profile(self):
-        # check the number of professionals in the US
-
+        """
+        Group users based on educational achievement over years of interest
+        returns: dataframe with users grouped based on educational achievement
+        """
         years = self.years
-
         dfEduProfileMultiYear = pd.DataFrame()
         dfEduProfileMultiYear['EdLevel'] = list(self.educationPlotAliases.values())
 
@@ -185,6 +217,10 @@ class DataProcess:
         return dfEduProfileMultiYear
 
     def find_multi_year_region_profile(self):
+        """
+        Group users based on geographical location over years of interest
+        returns: dataframe with users grouped based ongeographical location
+        """
         dfRegionStatsMultiYear = []
         for yearItt, year in enumerate(self.years):
             dfRegionsSingleYear = self.allDfs[yearItt]
@@ -228,11 +264,18 @@ class DataProcess:
 
 
 class Dataplotter:
+    """
+    Class to handle plotting of all the processed data
+    (age, education and locations)
+    """
     def __init__(self, years_to_load):
         self.yearsToLoad = years_to_load
 
     def plot_age_profile(self, df_age_profile):
-        # the age groupings are a bit too granular so further group them
+        """
+        Plot change in age profile across years of interest
+        Output:Matplotlib plots
+        """
         plt.figure(f'Age profile for last {len(self.yearsToLoad)}-years')
         plt.title(f'Age profile for last {len(self.yearsToLoad)}-years')
         for year in self.yearsToLoad:
@@ -252,7 +295,10 @@ class Dataplotter:
         plt.ylabel('Percent (%)')
 
     def plot_education_profile(self, df_edu_profile_multi_year):
-
+        """
+        Plot change in education achievement across years of interest
+        Output:Matplotlib plots
+        """
         plt.figure(f'Education profile for last {len(self.yearsToLoad)}-years')
         plt.title(f'Education profile for last {len(self.yearsToLoad)}-years')
         plt.xticks(rotation=90)
@@ -277,7 +323,10 @@ class Dataplotter:
 
     @staticmethod
     def plot_regional_spread_change(df_region_stats_multi_year):
-
+        """
+        Plot change in geographic location of users across years of interest
+        Output:.svg saved to disk
+        """
         continentStats_beginYear = df_region_stats_multi_year[0].groupby(["Continents"]).sum()
         continentStats_beginYear = continentStats_beginYear.reset_index()
         continentStats_endYear = df_region_stats_multi_year[-1].groupby(["Continents"]).sum()
@@ -294,7 +343,6 @@ class Dataplotter:
         ##########################################################
         # Where do the users principally live
         ##########################################################
-
         # generate colours for the ranges of continent size
         ranges_df = pd.DataFrame(columns=['label', 'lowThreshold', 'highThreshold', 'colour'])
         ranges_df = pd.concat([ranges_df, pd.DataFrame.from_records([{'label': 'reallySmall', 'lowThreshold': 0,
@@ -305,7 +353,6 @@ class Dataplotter:
                                                                       'highThreshold': 30, 'colour': '#3CB371'}])])
         ranges_df = pd.concat([ranges_df, pd.DataFrame.from_records([{'label': 'VeryBig', 'lowThreshold': 30,
                                                                       'highThreshold': 100, 'colour': '#006400'}])])
-
         # colours and legend text
         colours = []
         proportions = {}
